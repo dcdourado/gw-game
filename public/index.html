@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GW - Game</title>
+  </head>
+  <body>
+    <canvas
+      id="match"
+      width="500"
+      height="500"
+      style="border: 10px solid #000000;"
+    ></canvas>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
+    <script>
+      const socket = io();
+      const canvas = document.getElementById("match");
+      const c = canvas.fill;
+      const context = canvas.getContext("2d");
+      context.font = "15px Georgia";
+
+      let players = [];
+
+      socket.on("init_players", (existentPlayers) => {
+        players = existentPlayers;
+        render();
+      });
+
+      socket.on("player_joined", (player) => {
+        players.push(player);
+        render();
+      });
+
+      socket.on("player_left", (leftPlayer) => {
+        players = players.filter((player) => player.pid !== leftPlayer.pid);
+        render();
+      });
+
+      socket.on("player", ({ key, data }) => {
+        if (key !== "player_move") {
+          return;
+        }
+
+        const { pid, value } = data;
+
+        const movingPlayerIndex = players.findIndex(
+          (player) => player.pid === pid
+        );
+
+        players[movingPlayerIndex] = {
+          ...players[movingPlayerIndex],
+          pos: { x: value.x, y: value.y },
+        };
+        render();
+      });
+
+      document.addEventListener("keypress", (e) => {
+        let action;
+
+        switch (e.key) {
+          case "w" || "W":
+            action = 0;
+            break;
+          case "d" || "D":
+            action = 1;
+            break;
+          case "s" || "S":
+            action = 2;
+            break;
+          case "a" || "A":
+            action = 3;
+            break;
+        }
+
+        if (action === undefined) {
+          return;
+        }
+
+        sendPacket("move", action);
+      });
+
+      function sendPacket(key, value) {
+        socket.emit("player", { key, value });
+      }
+
+      function render() {
+        paintReset();
+        players.forEach((player) => {
+          paintPlayer(player);
+        });
+      }
+
+      function paintPlayer(player) {
+        const { username, pos } = player;
+        const tileSize = canvas.width / 10;
+        const playerMapX = pos.x * tileSize;
+        const playerMapY = tileSize * 9 - pos.y * tileSize;
+
+        context.fillStyle = "black";
+
+        context.fillText(username, playerMapX, playerMapY - tileSize / 10);
+
+        context.fillRect(playerMapX, playerMapY, tileSize, tileSize);
+      }
+
+      function paintReset() {
+        context.fillStyle = "white";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+      }
+    </script>
+  </body>
+</html>
