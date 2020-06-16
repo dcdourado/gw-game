@@ -5,7 +5,7 @@ import Game from "./models/game";
 import Player from "./models/player";
 import { EventEnum } from "./utils/enums";
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 4000;
 
 const app = express();
 const server = app.listen(PORT, () =>
