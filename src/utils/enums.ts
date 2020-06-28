@@ -7,12 +7,16 @@ export enum EventEnum {
   PLAYER_LEFT = "player_left",
   PLAYER_MOVE = "player_move",
   INIT_PLAYERS = "init_players",
+
+  ARROW = "arrow",
+  ARROW_MOVE = "arrow_move",
+  ARROW_HIT = "arrow_hit",
+  ARROW_DELETE = "arrow_delete",
 }
 
-export enum ActionEnum {
-  MOVE_UP,
-  MOVE_RIGHT,
-  MOVE_DOWN,
-  MOVE_LEFT,
-  SHOOT,
+export enum DirectionEnum {
+  UP,
+  RIGHT,
+  DOWN,
+  LEFT,
 }

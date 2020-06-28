@@ -1,23 +1,29 @@
 import { Socket } from "socket.io";
 
-import { EventEnum, ActionEnum } from "../utils/enums";
+import Game from "./game";
+import GameObject from "./gameObject";
+
+import { EventEnum, DirectionEnum } from "../utils/enums";
 import { PlayerPacket } from "../utils/interfaces";
+import Arrow from "./arrow";
 
-class Player {
+class Player extends GameObject {
   socket: Socket;
-  broadcastSockets: Socket[];
 
+  hp = 100;
   username: string;
   pid: string;
-  exhaustMove: number;
-  private pos: [number, number];
+  private exhaustMove: number;
 
-  constructor(socket: Socket) {
+  private readonly MOVE_SPEED = 400;
+
+  constructor(socket: Socket, game: Game, pos: [number, number]) {
+    super(game, pos);
+
     this.socket = socket;
 
     this.username = "Lucas8x";
     this.pid = socket.id;
-    this.pos = [Math.floor(Math.random() * 10), Math.floor(Math.random() * 10)];
     this.exhaustMove = -1;
     this.socketSetup();
   }
@@ -29,45 +35,46 @@ class Player {
   }
 
   private packetResolve(packet: PlayerPacket) {
+    console.log("Packet received");
     switch (packet.key) {
       case "move":
         this.move(packet.value);
         break;
+      case "shoot":
+        this.shoot(packet.value);
       default:
         return;
     }
   }
 
   private packetSend(key: string, value: Object) {
-    this.broadcastSockets.forEach((socket) =>
-      socket.emit(EventEnum.PLAYER, {
-        key,
-        data: {
-          pid: this.pid,
-          value,
-        },
-      })
-    );
+    this.game.broadcastPacket(EventEnum.PLAYER, {
+      key,
+      data: {
+        value,
+        pid: this.pid,
+      },
+    });
   }
 
-  private move(action: ActionEnum) {
+  private move(direction: DirectionEnum) {
     const timeMs = new Date().getTime();
     if (this.exhaustMove - timeMs > 0) {
       return;
     }
-    this.exhaustMove = timeMs + 400;
+    this.exhaustMove = timeMs + this.MOVE_SPEED;
 
-    switch (action) {
-      case ActionEnum.MOVE_UP:
+    switch (direction) {
+      case DirectionEnum.UP:
         this.setPos(this.getX(), this.getY() + 1);
         break;
-      case ActionEnum.MOVE_RIGHT:
+      case DirectionEnum.RIGHT:
         this.setPos(this.getX() + 1, this.getY());
         break;
-      case ActionEnum.MOVE_DOWN:
+      case DirectionEnum.DOWN:
         this.setPos(this.getX(), this.getY() - 1);
         break;
-      case ActionEnum.MOVE_LEFT:
+      case DirectionEnum.LEFT:
         this.setPos(this.getX() - 1, this.getY());
         break;
     }
@@ -75,26 +82,8 @@ class Player {
     this.packetSend(EventEnum.PLAYER_MOVE, { x: this.getX(), y: this.getY() });
   }
 
-  private setPos(x: number, y: number) {
-    let nextX = x;
-    let nextY = y;
-
-    if (x < 0 || x > 9) {
-      nextX = this.getX();
-    }
-    if (y < 0 || y > 9) {
-      nextY = this.getY();
-    }
-
-    this.pos = [nextX, nextY];
-  }
-
-  getX() {
-    return this.pos[0];
-  }
-
-  getY() {
-    return this.pos[1];
+  private shoot(direction: DirectionEnum) {
+    new Arrow(this.game, [this.getX(), this.getY()], direction);
   }
 }
 

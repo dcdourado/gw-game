@@ -22,6 +22,7 @@
       context.font = "15px Georgia";
 
       let players = [];
+      let arrows = [];
 
       socket.on("init_players", (existentPlayers) => {
         players = existentPlayers;
@@ -42,7 +43,6 @@
         if (key !== "player_move") {
           return;
         }
-
         const { pid, value } = data;
 
         const movingPlayerIndex = players.findIndex(
@@ -56,21 +56,83 @@
         render();
       });
 
-      document.addEventListener("keypress", (e) => {
+      socket.on("arrow", ({ key, data }) => {
+        const { id, value } = data;
+
+        switch (key) {
+          case "arrow_move":
+            handleArrowMove(id, value);
+            break;
+          case "arrow_delete":
+            handleArrowDelete(id);
+            break;
+          case "arrow_hit":
+            handleArrowHit(value.target, value.hp);
+            break;
+        }
+        render();
+      });
+
+      function handleArrowMove(id, value) {
+        const movingArrowIndex = arrows.findIndex((arrow) => arrow.id === id);
+
+        if (movingArrowIndex === -1) {
+          arrows.push({
+            id,
+            pos: value,
+          });
+        } else {
+          arrows[movingArrowIndex] = {
+            ...arrows[movingArrowIndex],
+            pos: value,
+          };
+        }
+      }
+
+      function handleArrowDelete(id) {
+        arrows = arrows.filter((arrow) => arrow.id !== id);
+      }
+
+      function handleArrowHit(target, hp) {
+        console.log(target, hp);
+        const hitPlayerIndex = players.findIndex(
+          (player) => player.pid === target
+        );
+
+        players[hitPlayerIndex] = {
+          ...players[hitPlayerIndex],
+          hp,
+        };
+        render();
+      }
+
+      document.addEventListener("keydown", (e) => {
         let action;
 
-        switch (e.key) {
-          case "w" || "W":
+        switch (e.key.toLowerCase()) {
+          case "w":
             action = 0;
             break;
-          case "d" || "D":
+          case "d":
             action = 1;
             break;
-          case "s" || "S":
+          case "s":
             action = 2;
             break;
-          case "a" || "A":
+          case "a":
             action = 3;
+            break;
+          case "arrowup":
+            action = 4;
+            break;
+          case "arrowright":
+            action = 5;
+            break;
+          case "arrowdown":
+            action = 6;
+            break;
+          case "arrowleft":
+            action = 7;
             break;
         }
 
@@ -78,7 +140,15 @@
           return;
         }
 
-        sendPacket("move", action);
+        let packetType;
+        if (action < 4) {
+          packetType = "move";
+        } else {
+          packetType = "shoot";
+          action -= 4;
+        }
+
+        sendPacket(packetType, action);
       });
 
       function sendPacket(key, value) {
@@ -90,19 +160,37 @@
         players.forEach((player) => {
           paintPlayer(player);
         });
+        arrows.forEach((arrow) => {
+          paintArrow(arrow);
+        });
       }
 
       function paintPlayer(player) {
-        const { username, pos } = player;
+        const { username, hp, pos } = player;
         const tileSize = canvas.width / 10;
         const playerMapX = pos.x * tileSize;
         const playerMapY = tileSize * 9 - pos.y * tileSize;
 
         context.fillStyle = "black";
 
-        context.fillText(username, playerMapX, playerMapY - tileSize / 10);
+        context.fillText(
+          username + "[" + hp + "]",
+          playerMapX,
+          playerMapY - tileSize / 10
+        );
 
         context.fillRect(playerMapX, playerMapY, tileSize, tileSize);
+      }
+
+      function paintArrow(arrow) {
+        const { pos } = arrow;
+        const tileSize = canvas.width / 10;
+        const arrowMapX = pos.x * tileSize;
+        const arrowMapY = tileSize * 9 - pos.y * tileSize;
+
+        context.fillStyle = "red";
+
+        context.fillRect(arrowMapX, arrowMapY, tileSize, tileSize);
       }
 
       function paintReset() {
