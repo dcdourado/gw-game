@@ -15,7 +15,6 @@ class Arrow extends GameObject {
 
   constructor(game: Game, pos: [number, number], direction: DirectionEnum) {
     super(game, pos);
-    console.log("Arrow created");
 
     this.direction = direction;
     this.interval = setInterval(() => {
@@ -34,8 +33,6 @@ class Arrow extends GameObject {
   }
 
   private tick() {
-    console.log("Flying...");
-
     if (!this.move()) {
       this.deleteArrow();
       return;
@@ -45,7 +42,6 @@ class Arrow extends GameObject {
     const playerHit = this.game.getPlayerOnPos(this.getX(), this.getY());
 
     if (playerHit) {
-      console.log(`Hit player ${playerHit.pid}`);
       this.hitPlayer(playerHit);
       this.deleteArrow();
     }
@@ -67,13 +63,12 @@ class Arrow extends GameObject {
   private hitPlayer(player: Player) {
     player.hp -= this.DAMAGE;
     this.packetSend(EventEnum.ARROW_HIT, {
-      target: player.pid,
+      target: player.id,
       hp: player.hp,
     });
   }
 
   private deleteArrow() {
-    console.log("Deleted");
     clearInterval(this.interval);
     this.packetSend(EventEnum.ARROW_DELETE);
   }

@@ -2,40 +2,45 @@ import { Socket } from "socket.io";
 
 import Game from "./game";
 import GameObject from "./gameObject";
+import Arrow from "./arrow";
 
 import { EventEnum, DirectionEnum } from "../utils/enums";
 import { PlayerPacket } from "../utils/interfaces";
-import Arrow from "./arrow";
 
 class Player extends GameObject {
   socket: Socket;
 
-  hp = 100;
+  id: number;
   username: string;
-  pid: string;
+  hp = 100;
   private exhaustMove: number;
 
   private readonly MOVE_SPEED = 400;
 
-  constructor(socket: Socket, game: Game, pos: [number, number]) {
+  constructor(pos: [number, number], game: Game, socket: Socket) {
     super(game, pos);
 
     this.socket = socket;
 
-    this.username = "Lucas8x";
-    this.pid = socket.id;
     this.exhaustMove = -1;
     this.socketSetup();
   }
 
+  init(id: number, username: string) {
+    this.id = id;
+    this.username = username;
+    this.game.addPlayer(this);
+  }
+
   private socketSetup() {
     this.socket.on(EventEnum.PLAYER, (packet: PlayerPacket) => {
-      this.packetResolve(packet);
+      if (this.game.started && this.hp > 0) {
+        this.packetResolve(packet);
+      }
     });
   }
 
   private packetResolve(packet: PlayerPacket) {
-    console.log("Packet received");
     switch (packet.key) {
       case "move":
         this.move(packet.value);
@@ -52,7 +57,7 @@ class Player extends GameObject {
       key,
       data: {
         value,
-        pid: this.pid,
+        id: this.id,
       },
     });
   }

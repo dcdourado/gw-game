@@ -1,11 +1,35 @@
 import Player from "./player";
+
+import connection from "../services/connection";
 import { EventEnum } from "../utils/enums";
 
 class Game {
+  started = false;
   players: Player[];
+  observers: Player[];
 
   constructor() {
     this.players = [];
+    this.observers = [];
+  }
+
+  start() {
+    this.started = true;
+  }
+
+  end() {
+    this.started = false;
+
+    this.players.forEach((player) => {
+      if (player.hp <= 0) {
+        return;
+      }
+
+      connection.query('UPDATE `user` SET `mmr` = `mmr` + 10 WHERE `id` = ?', [player.id]);
+    })
+
+    this.players = [];
+    this.observers = [];
   }
 
   broadcastPacket(type: EventEnum, packet: Object) {
@@ -16,7 +40,8 @@ class Game {
 
   addPlayer(player: Player) {
     const packetNewPlayer = {
-      pid: player.pid,
+      id: player.id,
+      username: player.username,
       hp: player.hp,
       pos: {
         x: player.getX(),
@@ -29,7 +54,7 @@ class Game {
     
     const packetPlayers = this.players.map((player) => ({
       username: player.username,
-      pid: player.pid,
+      id: player.id,
       hp: player.hp,
       pos: {
         x: player.getX(),
@@ -37,17 +62,15 @@ class Game {
       },
     }));
     player.socket.emit(EventEnum.INIT_PLAYERS, packetPlayers);
-
-    console.log(`Player joined (pid ${player.pid})`);
   }
 
-  removePlayer(removedPlayer: Player) {
+  removePlayer(removePlayerId: number) {
     this.players.forEach((player) => {
-      player.socket.emit(EventEnum.PLAYER_LEFT, { pid: removedPlayer.pid });
+      player.socket.emit(EventEnum.PLAYER_LEFT, { id: removePlayerId });
     });
 
     this.players = this.players.filter(
-      (player) => player.pid !== removedPlayer.pid
+      (player) => player.id !== removePlayerId
     );
   }
 
@@ -56,7 +79,6 @@ class Game {
 
     this.players.forEach((player) => {
       if (player.getX() === x && player.getY() === y) {
-        console.log("Achei um player aqui!!");
         selectedPlayer = player;
       }
     });

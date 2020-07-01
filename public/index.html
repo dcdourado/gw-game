@@ -14,8 +14,9 @@
     ></canvas>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.2/axios.js"></script>
     <script>
-      const socket = io();
+      const socket = io()
       const canvas = document.getElementById("match");
       const c = canvas.fill;
       const context = canvas.getContext("2d");
@@ -23,6 +24,11 @@
 
       let players = [];
       let arrows = [];
+      
+      const id = window.location.search.split("=")[1];
+      socket.on("link", (pid) => {
+        axios.post('http://localhost:4000/link/' + id, { pid });
+      })
 
       socket.on("init_players", (existentPlayers) => {
         players = existentPlayers;
@@ -35,7 +41,7 @@
       });
 
       socket.on("player_left", (leftPlayer) => {
-        players = players.filter((player) => player.pid !== leftPlayer.pid);
+        players = players.filter((player) => player.id !== leftPlayer.id);
         render();
       });
 
@@ -43,10 +49,10 @@
         if (key !== "player_move") {
           return;
         }
-        const { pid, value } = data;
+        const { id, value } = data;
 
         const movingPlayerIndex = players.findIndex(
-          (player) => player.pid === pid
+          (player) => player.id === id
         );
 
         players[movingPlayerIndex] = {
@@ -96,7 +102,7 @@
       function handleArrowHit(target, hp) {
         console.log(target, hp);
         const hitPlayerIndex = players.findIndex(
-          (player) => player.pid === target
+          (player) => player.id === target
         );
 
         players[hitPlayerIndex] = {
@@ -171,7 +177,11 @@
         const playerMapX = pos.x * tileSize;
         const playerMapY = tileSize * 9 - pos.y * tileSize;
 
-        context.fillStyle = "black";
+        if (player.hp > 0) {
+          context.fillStyle = "black";
+        } else {
+          context.fillStyle = "gray";
+        }
 
         context.fillText(
           username + "[" + hp + "]",
