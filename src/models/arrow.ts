@@ -10,7 +10,7 @@ class Arrow extends GameObject {
   private id = nanoid();
   private direction: DirectionEnum;
   private interval: NodeJS.Timeout;
-  private readonly DAMAGE = 20;
+  private readonly DAMAGE = 5;
   private readonly MOVE_SPEED = 100;
 
   constructor(game: Game, pos: [number, number], direction: DirectionEnum) {
